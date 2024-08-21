@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  
+  postgres_prod:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: prod_bot
+      POSTGRES_PASSWORD: yElqYfd9
+      POSTGRES_DB: prod_bot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5433"
+  
+  migrations:
+    build:
+      context: .
+      dockerfile: migrations.dockerfile
+    environment:
+      POSTGRES_CONN: postgresql://secret@postgres_prod/prod_bot
+      PATH_TO_PROJECT: /
+      IS_TEST_SETTINGS: False
+    depends_on:
+      postgres_prod: 
+        condition: service_healthy
+
+  telegram_bot:
+    restart: always
+    environment:
+      BOT_TOKEN: secret
+      POSTGRES_CONN: postgresql://secret@postgres_prod/prod_bot
+      PATH_TO_PROJECT: /
+      STORAGE_PATH: /output
+      IS_TEST_SETTINGS: False
+       
+    build:
+      context: .
+      dockerfile: telegram_bot.dockerfile
+    depends_on:
+      - postgres_prod
+      - migrations
